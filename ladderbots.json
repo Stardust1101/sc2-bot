@@ -1,0 +1,12 @@
+{
+    "Bots": {
+        "botStardust": {
+            "Race": "Protoss",
+            "Type": "Python",
+            "RootPath": "./",
+            "FileName": "run.py",
+            "Args": "-O",
+            "Debug": true
+        }
+    }
+}

@@ -1,0 +1,22 @@
+Starting local game...
+INFO:sc2.protocol:Client status changed to Status.launched (was None)
+INFO:sc2.controller:Creating new game
+INFO:sc2.controller:Map:     TritonLE
+INFO:sc2.controller:Players: Bot Bot_Stardust(Protoss), Computer VeryHard(Protoss, Macro)
+INFO:sc2.protocol:Client status changed to Status.init_game (was Status.launched)
+INFO:sc2.protocol:Client status changed to Status.in_game (was None)
+INFO:root:Player 1 - Bot Bot_Stardust(Protoss)
+INFO:sc2.protocol:Client status changed to Status.ended (was Status.in_game)
+INFO:root:Result for player 1 - Bot Bot_Stardust(Protoss): Victory
+INFO:sc2.client:Saved replay to AI1332.SC2Replay
+INFO:sc2.protocol:Client status changed to Status.launched (was Status.ended)
+INFO:sc2.protocol:Client status changed to Status.quit (was Status.launched)
+INFO:sc2.sc2process:kill_switch: Process cleanup
+INFO:sc2.sc2process:Cleaning up...
+INFO:sc2.sc2process:Cleanup complete
+Starting ladder game...
+INFO:sc2.protocol:Client status changed to Status.in_game (was None)
+INFO:root:Player 1 - Bot bot_stardust(Protoss)
+ERROR:asyncio:Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001F6ABE84F08>
+INFO:sc2.protocol:Cannot receive: Connection already closed.

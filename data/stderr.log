@@ -1,0 +1,14 @@
+
+10-02-2020 12-08-50: Starting game vs Bot_Stardust_II
+
+10-02-2020 12-14-10: Starting game vs Bot_Stardust_II
+C:\Users\CATIC\AppData\Local\Programs\Python\Python37\lib\site-packages\aiohttp\client.py:309: ResourceWarning: Unclosed client session <aiohttp.client.ClientSession object at 0x000001F6ABE84F08>
+  **kwargs)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+D:\Starcraft II\Ladder\Bots\Bot_Stardust_III\__init__.py:87: RuntimeWarning: coroutine 'ClientWebSocketResponse.close' was never awaited
+  ws_connection.close()
+RuntimeWarning: Enable tracemalloc to get the object allocation traceback
+
+24-06-2020 21-45-03: Starting game vs Bot_Stardust_II
+
+24-06-2020 21-45-42: Starting game vs Bot_Stardust_II
