@@ -19,3 +19,4 @@ class BotStardust(StalkerColossus):
         await self.stalker_colossus()
 
 
+

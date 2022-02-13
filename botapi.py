@@ -12,9 +12,16 @@ from sc2.bot_ai import BotAI
 from sc2.data import Race
 
 
+async def micro_attack(unit: Unit, enemy: Unit):
+    if unit.weapon_cooldown != 0:
+        unit.move(enemy.position.towards(unit.position, unit.ground_range + 1))
+    else:
+        unit.attack(enemy)
+
+
 class BotApi(BotAI):
     async def train_(self, building: UnitTypeId, unit: UnitTypeId):
-        if building in [UnitTypeId.NEXUS]:
+        if building == UnitTypeId.NEXUS:
             for nexus in self.townhalls.ready.idle:
                 if self.can_afford(unit):
                     nexus.train(unit)
@@ -29,12 +36,17 @@ class BotApi(BotAI):
         if self.can_afford(building):
             await self.build(building, near=position)
 
-    async def count(self, building: UnitTypeId, count_pending: bool = True) -> int:
+    async def count_building(self, building: UnitTypeId, count_pending: bool = True) -> int:
         ready = self.structures(building).ready.amount
         pending = self.already_pending(building)
         if building == UnitTypeId.GATEWAY or building == UnitTypeId.WARPGATE:
             ready = self.structures(UnitTypeId.GATEWAY).ready.amount + self.structures(UnitTypeId.WARPGATE).ready.amount
             pending = self.already_pending(UnitTypeId.GATEWAY) + self.already_pending(UnitTypeId.WARPGATE)
+        return ready + (count_pending * pending)
+
+    async def count_unit(self, unit: UnitTypeId, count_pending: bool = True) -> int:
+        ready = self.units(unit).ready.amount
+        pending = self.already_pending(unit)
         return ready + (count_pending * pending)
 
     async def build_assimilator_(self):
@@ -45,7 +57,7 @@ class BotApi(BotAI):
                 for geyser in geysers:
                     worker = self.units(UnitTypeId.PROBE).ready.closest_to(geyser.position)
                     if worker and self.can_afford(UnitTypeId.ASSIMILATOR):
-                        self.do(worker.build(UnitTypeId.ASSIMILATOR, geyser))
+                        worker.build(UnitTypeId.ASSIMILATOR, geyser)
                         break
 
     async def has_ability(self, ability: AbilityId, unit: Units) -> bool:
@@ -69,5 +81,26 @@ class BotApi(BotAI):
                 else:
                     placement = position.Point2((location.x + x, location.y + y))
                 if self.can_afford(unit):
-                    self.do(warpgate.warp_in(unit, placement))
+                    warpgate.warp_in(unit, placement)
 
+    async def defend(self, unit: Unit):
+        half_map = self.start_location.position.distance_to(self.enemy_start_locations[0].position)
+        enemy_unit = self.enemy_units.filter(
+            lambda enemy: enemy.distance_to(self.start_location) < 0.4 * half_map)
+        enemy_structure = self.enemy_structures.filter(
+            lambda enemy: enemy.distance_to(self.start_location) < 0.4 * half_map)
+        rally_position = self.structures(UnitTypeId.PYLON).ready.closest_to(self.enemy_start_locations[0]). \
+            position.towards(self.game_info.map_center, 10)
+        enemy_offensive = enemy_unit + enemy_structure
+        if len(enemy_offensive) != 0:
+            await micro_attack(unit, enemy_offensive.closest_to(unit))
+        else:
+            if unit.distance_to(rally_position) > 10:
+                unit.move(rally_position)
+
+    async def attack(self, unit: Unit):
+        enemy = self.enemy_units + self.enemy_structures
+        if len(enemy) != 0:
+            await micro_attack(unit, enemy.closest_to(unit))
+        else:
+            unit.attack(self.enemy_start_locations[0])
