@@ -1,22 +1,21 @@
 import sc2
-from sc2 import *
-from sc2.constants import UnitTypeId, AbilityId, BuffId
-from sc2 import Race
+from sc2.ids.unit_typeid import UnitTypeId
+from sc2.ids.ability_id import AbilityId
+from sc2.ids.upgrade_id import UpgradeId
+from sc2.units import Units
+from sc2.unit import Unit
+from sc2.position import Point2
+from sc2.player import Bot, Computer
 
-from start import *
-from mid import *
-from bot_api import *
+from sc2.bot_ai import BotAI
+from sc2.data import Race
+
+from botapi import *
+from StalkerColossus import StalkerColossus
 
 
-class BotStardust(start, Mid, bot_api):
+class BotStardust(StalkerColossus):
     async def on_step(self, iteration):
-        await self.stalker_colossus_full()
+        await self.stalker_colossus()
 
-    async def stalker_colossus_full(self):
-        if self.supply_workers < 22:
-            await self.two_base()
-        else:
-            await self.stalker_colossus()
 
-    async def one_base_four_gateway_full(self):
-        await self.one_base_four_gateway_mid()
