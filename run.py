@@ -7,7 +7,7 @@ import random
 
 from sc2 import maps
 from sc2.main import run_game
-
+import time
 
 # Load bot
 from bot_main import BotStardust
@@ -35,13 +35,16 @@ if __name__ == "__main__":
                 'WorldofSleepersLE'
             ]
         )
+        opponent_race = Race.Protoss
+        difficulty = Difficulty.VeryHard
         # map_name = "(2)16-BitLE"
         run_game(
             maps.get(map_name),
             [
                 # Human(Race.Terran),
                 bot,
-                Computer(Race.Protoss, Difficulty.VeryHard),  # CheatInsane VeryHard
+                Computer(opponent_race, difficulty),  # CheatInsane VeryHard
             ],
             realtime=False,
+            save_replay_as="./replay/" + map_name + time.strftime("%m%d%H%M%S") + ".SC2Replay"
         )

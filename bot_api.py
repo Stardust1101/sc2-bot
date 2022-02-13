@@ -12,14 +12,34 @@ from sc2.bot_ai import BotAI
 from sc2.data import Race
 
 
-async def micro_attack(unit: Unit, enemy: Unit):
-    if unit.weapon_cooldown != 0:
-        unit.move(enemy.position.towards(unit.position, unit.ground_range + 1))
+async def micro_attack(unit: Unit, enemy: Unit, micro: bool = True):
+    if micro and not enemy.is_structure:
+        if unit.weapon_cooldown == 0:
+            unit.attack(enemy)
+        elif unit.weapon_cooldown < 0:
+            unit.move(enemy.position.towards(unit.position, 7))
+        else:
+            unit.move(enemy.position.towards(unit.position, unit.ground_range + 1))
     else:
         unit.attack(enemy)
 
 
+async def random(min, max):
+    import random
+    output = random.randrange(min, max)
+    return output
+
+
 class BotApi(BotAI):
+
+    def has_order(self, orders, unit):
+        if type(orders) != list:
+            orders = [orders]
+        count = 0
+        if len(unit.orders) >= 1 and unit.orders[0].ability.id in orders:
+            count += 1
+        return count
+
     async def train_(self, building: UnitTypeId, unit: UnitTypeId):
         if building == UnitTypeId.NEXUS:
             for nexus in self.townhalls.ready.idle:
@@ -83,7 +103,7 @@ class BotApi(BotAI):
                 if self.can_afford(unit):
                     warpgate.warp_in(unit, placement)
 
-    async def defend(self, unit: Unit):
+    async def defend(self, unit: Unit, distance: int = 1):
         half_map = self.start_location.position.distance_to(self.enemy_start_locations[0].position)
         enemy_unit = self.enemy_units.filter(
             lambda enemy: enemy.distance_to(self.start_location) < 0.4 * half_map)
@@ -93,7 +113,7 @@ class BotApi(BotAI):
             position.towards(self.game_info.map_center, 10)
         enemy_offensive = enemy_unit + enemy_structure
         if len(enemy_offensive) != 0:
-            await micro_attack(unit, enemy_offensive.closest_to(unit))
+            await micro_attack(unit, enemy_offensive.closest_to(unit), micro=unit.type_id != UnitTypeId.ZEALOT)
         else:
             if unit.distance_to(rally_position) > 10:
                 unit.move(rally_position)
@@ -101,6 +121,14 @@ class BotApi(BotAI):
     async def attack(self, unit: Unit):
         enemy = self.enemy_units + self.enemy_structures
         if len(enemy) != 0:
-            await micro_attack(unit, enemy.closest_to(unit))
+            await micro_attack(unit, enemy.closest_to(unit), micro=unit.type_id != UnitTypeId.ZEALOT)
         else:
             unit.attack(self.enemy_start_locations[0])
+
+    async def order(self, units, order, target=None, silent=True):
+        if type(units) != list:
+            unit = units
+            unit(order, target=target)
+        else:
+            for unit in units:
+                unit(order, target=target)
