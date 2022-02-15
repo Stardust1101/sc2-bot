@@ -1,8 +1,8 @@
 import sc2, sys
 from __init__ import run_ladder_game
 from sc2.bot_ai import BotAI
-from sc2.data import Race, Difficulty
-from sc2.player import Bot, Computer
+from sc2.data import Race, Difficulty, AIBuild
+from sc2.player import Bot, Computer, Human
 import random
 
 from sc2 import maps
@@ -35,16 +35,16 @@ if __name__ == "__main__":
                 'WorldofSleepersLE'
             ]
         )
-        opponent_race = Race.Protoss
+        opponent_race = Race.Zerg
         difficulty = Difficulty.VeryHard
         # map_name = "(2)16-BitLE"
         run_game(
             maps.get(map_name),
             [
-                # Human(Race.Terran),
+                # Human(Race.Protoss),
                 bot,
-                Computer(opponent_race, difficulty),  # CheatInsane VeryHard
+                Computer(opponent_race, difficulty, ai_build=AIBuild.Rush),  # CheatInsane VeryHard
             ],
             realtime=False,
-            save_replay_as="./replay/" + map_name + time.strftime("%m%d%H%M%S") + ".SC2Replay"
+            #save_replay_as="./replay/" + map_name + time.strftime("%m%d%H%M%S") + ".SC2Replay"
         )

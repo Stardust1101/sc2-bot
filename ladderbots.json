@@ -1,6 +1,6 @@
 {
     "Bots": {
-        "botStardust": {
+        "BotStardust": {
             "Race": "Protoss",
             "Type": "Python",
             "RootPath": "./",

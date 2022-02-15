@@ -13,21 +13,32 @@ from sc2.data import Race
 
 
 async def micro_attack(unit: Unit, enemy: Unit, micro: bool = True):
-    if micro and not enemy.is_structure:
+    if not enemy.type_id == UnitTypeId.DISRUPTORPHASED:
         if unit.weapon_cooldown == 0:
             unit.attack(enemy)
         elif unit.weapon_cooldown < 0:
             unit.move(enemy.position.towards(unit.position, 7))
         else:
-            unit.move(enemy.position.towards(unit.position, unit.ground_range + 1))
+            if not enemy.is_structure:
+                unit.move(enemy.position.towards(unit.position, unit.ground_range + 1))
+            else:
+                unit.move(enemy.position.towards(unit.position, unit.ground_range - 1))
     else:
-        unit.attack(enemy)
+        unit.move(enemy.position.towards(unit.position, 12))
 
 
 async def random(min, max):
     import random
     output = random.randrange(min, max)
     return output
+
+
+def structure_attack(enemy: Unit):
+    return enemy.type_id == UnitTypeId.PHOTONCANNON or enemy.type_id == UnitTypeId.SPINECRAWLER
+
+
+def is_worker(enemy: Unit):
+    return enemy.type_id in [UnitTypeId.PROBE, UnitTypeId.SCV, UnitTypeId.DRONE]
 
 
 class BotApi(BotAI):
@@ -87,26 +98,26 @@ class BotApi(BotAI):
         else:
             return False
 
-    async def warp_in(self,
-                      unit: UnitTypeId,
-                      location=None):
+    async def warp_in(self, unit: UnitTypeId, location=None):
         import random
         x = random.randrange(-8, 8)
         y = random.randrange(-8, 8)
-        for warpgate in self.structures(UnitTypeId.WARPGATE).ready.idle:
+        for warpgate in self.structures(UnitTypeId.WARPGATE).ready:
+            if not await self.has_ability(AbilityId.WARPGATETRAIN_ZEALOT, warpgate):
+                continue
             if self.structures(UnitTypeId.PYLON).ready.exists:
                 if location is None:
                     position_point = self.structures(UnitTypeId.PYLON).ready.random.position
-                    placement = position.Point2((position_point.x + x, position_point.y + y))
+                    placement = Point2((position_point.x + x, position_point.y + y))
                 else:
-                    placement = position.Point2((location.x + x, location.y + y))
+                    placement = Point2((location.x + x, location.y + y))
                 if self.can_afford(unit):
                     warpgate.warp_in(unit, placement)
+                    return
 
-    async def defend(self, unit: Unit, distance: int = 1):
+    async def defend(self, unit: Unit):
         half_map = self.start_location.position.distance_to(self.enemy_start_locations[0].position)
-        enemy_unit = self.enemy_units.filter(
-            lambda enemy: enemy.distance_to(self.start_location) < 0.4 * half_map)
+        enemy_unit = self.enemy_units.filter(lambda enemy: enemy.distance_to(self.start_location) < 0.4 * half_map)
         enemy_structure = self.enemy_structures.filter(
             lambda enemy: enemy.distance_to(self.start_location) < 0.4 * half_map)
         rally_position = self.structures(UnitTypeId.PYLON).ready.closest_to(self.enemy_start_locations[0]). \
@@ -119,9 +130,14 @@ class BotApi(BotAI):
                 unit.move(rally_position)
 
     async def attack(self, unit: Unit):
-        enemy = self.enemy_units + self.enemy_structures
-        if len(enemy) != 0:
-            await micro_attack(unit, enemy.closest_to(unit), micro=unit.type_id != UnitTypeId.ZEALOT)
+        enemy = self.enemy_structures + self.enemy_units
+        enemy_offensive = self.enemy_units.filter(lambda unit: not is_worker(unit)) + \
+                self.enemy_structures.filter(lambda unit: structure_attack(unit))
+        enemy_passive = enemy - enemy_offensive
+        if len(enemy_offensive) != 0:
+            await micro_attack(unit, enemy_offensive.closest_to(unit), micro=unit.type_id != UnitTypeId.ZEALOT)
+        elif len(self.enemy_structures) != 0:
+            await micro_attack(unit, enemy_passive.closest_to(unit), micro=unit.type_id != UnitTypeId.ZEALOT)
         else:
             unit.attack(self.enemy_start_locations[0])
 

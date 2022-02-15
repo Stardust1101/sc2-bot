@@ -18,14 +18,16 @@ class StalkerColossus(BotApi):
     warp = False
     attack_troop = []
     defend_troop = []
+    dead_troop = []
+    army_length = 0
 
     async def stalker_colossus(self):
-        await self.troop()
         await self.economy()
+        await self.troop()
         await self.tech()
 
     async def economy(self):
-        await self.distribute_workers(resource_ratio=1.6)
+        await self.CONTROL_PANIC()
         await self.train_probe()
 
         await self.build_nexus()
@@ -89,7 +91,7 @@ class StalkerColossus(BotApi):
                          self.structures(UnitTypeId.WARPGATE).amount * 2 + \
                          self.structures(UnitTypeId.ROBOTICSBAY).amount * 6 + \
                          self.townhalls.amount
-        if self.supply_left + potential_supply < min(supply_consume, 200 - self.supply_used):
+        if self.supply_left + potential_supply <= min(supply_consume, 200 - self.supply_used):
             await self.build_(UnitTypeId.PYLON, position)
 
     async def build_gateway(self):
@@ -175,7 +177,7 @@ class StalkerColossus(BotApi):
             if await self.count_unit(UnitTypeId.STALKER) >= 2:
                 await self.train_(UnitTypeId.GATEWAY, UnitTypeId.SENTRY)
         else:
-            sentry_amount = self.supply_army * 0.06 / 2 + 1
+            sentry_amount = self.supply_army * 0.03 / 2 + 1
             if await self.count_unit(UnitTypeId.SENTRY) < sentry_amount:
                 await self.warp_in(UnitTypeId.SENTRY)
 
@@ -184,7 +186,7 @@ class StalkerColossus(BotApi):
             if await self.count_unit(UnitTypeId.STALKER) < 2:
                 await self.train_(UnitTypeId.GATEWAY, UnitTypeId.STALKER)
         else:
-            stalker_amount = self.supply_army * 0.4 / 2 + 1
+            stalker_amount = self.supply_army * 0.33 / 2 + 1
             if await self.count_unit(UnitTypeId.STALKER) < stalker_amount:
                 await self.warp_in(UnitTypeId.STALKER)
 
@@ -196,12 +198,12 @@ class StalkerColossus(BotApi):
 
     async def train_colossus(self):
         if self.structures(UnitTypeId.ROBOTICSBAY).ready.exists:
-            colossus_amount = self.supply_army * 0.18 / 6 + 1
+            colossus_amount = self.supply_army * 0.25 / 6 + 1
             if await self.count_unit(UnitTypeId.COLOSSUS) < colossus_amount:
                 await self.train_(UnitTypeId.ROBOTICSFACILITY, UnitTypeId.COLOSSUS)
 
     async def train_immortal(self):
-        immortal_amount = self.supply_army * 0.16 / 4 + 1
+        immortal_amount = self.supply_army * 0.19 / 4 + 1
         if await self.count_unit(UnitTypeId.IMMORTAL) < immortal_amount:
             await self.train_(UnitTypeId.ROBOTICSFACILITY, UnitTypeId.IMMORTAL)
 
@@ -210,8 +212,14 @@ class StalkerColossus(BotApi):
             await self.warp_in(UnitTypeId.HIGHTEMPLAR)
 
     async def train_observer(self):
-        if await self.count_unit(UnitTypeId.OBSERVER) < 2:
+        if await self.count_unit(UnitTypeId.OBSERVER) < 1:
             await self.train_(UnitTypeId.ROBOTICSFACILITY, UnitTypeId.OBSERVER)
+        elif await self.count_unit(UnitTypeId.OBSERVER) < 2 and await self.count_unit(UnitTypeId.IMMORTAL) > 0:
+            await self.train_(UnitTypeId.ROBOTICSFACILITY, UnitTypeId.OBSERVER)
+
+    async def train_warpprism(self):
+        if await self.count_unit(UnitTypeId.WARPPRISM) < 2:
+            await self.train_(UnitTypeId.ROBOTICSFACILITY, UnitTypeId.WARPPRISM)
 
     async def operation_cyberneticscore(self):  # For Ground Units
         for cyberneticscore in self.structures(UnitTypeId.CYBERNETICSCORE).ready.idle:
@@ -328,13 +336,21 @@ class StalkerColossus(BotApi):
             return
         for observer in self.units(UnitTypeId.OBSERVER).ready.idle:
             observer.move(self.units(UnitTypeId.STALKER).closest_to(self.enemy_start_locations[0]).position.towards(
-                self.townhalls.first, 2
-            ))
+                self.townhalls.first, 2))
 
     async def operation_hightemplar(self):
         for hightemplar in self.units(UnitTypeId.HIGHTEMPLAR):
-            if await self.has_ability(AbilityId.MORPH_ARCHON, hightemplar):
-                hightemplar(AbilityId.MORPH_ARCHON)
+            await self.defend(hightemplar)
+        if not self.structures(UnitTypeId.PYLON).ready.exists:
+            return
+        rally_position = self.structures(UnitTypeId.PYLON).ready.closest_to(self.enemy_start_locations[0]). \
+            position.towards(self.game_info.map_center, 10)
+        for i in range(1, self.units(UnitTypeId.HIGHTEMPLAR).ready.amount, 2):
+            templar_a = self.units(UnitTypeId.HIGHTEMPLAR)[i]
+            templar_b = self.units(UnitTypeId.HIGHTEMPLAR)[i - 1]
+            if templar_a.distance_to(rally_position) < 10 and templar_b.distance_to(rally_position) < 10 :
+                templar_a(AbilityId.MORPH_ARCHON)
+                templar_b(AbilityId.MORPH_ARCHON)
 
     async def CONTROL_ATTACK(self):
         army = self.units(UnitTypeId.STALKER).ready + \
@@ -344,22 +360,53 @@ class StalkerColossus(BotApi):
                self.units(UnitTypeId.COLOSSUS).ready + \
                self.units(UnitTypeId.ARCHON).ready
 
+        attack_troop = []
+        defend_troop = []
         for unit in army:
+            # For new unit that has been produced.
             if not unit in self.attack_troop and not unit in self.defend_troop:
-                self.defend_troop.append(unit)
-        if len(self.defend_troop) >= 40 or self.supply_used >= 194:
+                defend_troop.append(unit)
+
+            # update the information of the list
+            elif unit in self.attack_troop:
+                attack_troop.append(unit)
+            elif unit in self.defend_troop:
+                defend_troop.append(unit)
+            # If a unit is in combat and is injured
+            #elif unit in self.attack_troop and (unit.shield_percentage == 0 and unit.health_percentage < 0.25):
+                #self.defend_troop.append(self.attack_troop.remove(unit))
+
+        self.attack_troop = attack_troop
+        self.defend_troop = defend_troop
+
+        if len(self.defend_troop) >= 35 or self.supply_used >= 194:
             self.attack_troop += self.defend_troop
             self.defend_troop = []
         if len(self.attack_troop) <= 10 or self.units(UnitTypeId.OBSERVER).ready.amount < 2:
             self.defend_troop += self.attack_troop
             self.attack_troop = []
 
+        print(len(self.attack_troop), len(self.defend_troop), army.amount)
+
+    async def CONTROL_PANIC(self):
+        half_map = self.start_location.position.distance_to(self.enemy_start_locations[0].position)
+        enemy_unit = self.enemy_units.filter(lambda enemy: enemy.distance_to(self.start_location) < 0.25 * half_map)
+        time_constant = 4 - self.time // 50
+        if len(enemy_unit) < 4 or len(self.defend_troop) - time_constant > len(enemy_unit):
+            for probe in self.units(UnitTypeId.PROBE):
+                if probe.is_attacking:
+                    probe.stop()
+            await self.distribute_workers(resource_ratio=1.6)
+        else:
+            for probe in self.units(UnitTypeId.PROBE):
+                await self.attack(probe)
+
     async def random_scout(self):
         units_to_ignore = [UnitTypeId.DRONE, UnitTypeId.SCV, UnitTypeId.PROBE, UnitTypeId.EGG, UnitTypeId.LARVA,
                            UnitTypeId.OVERLORD, UnitTypeId.OVERSEER, UnitTypeId.OBSERVER]
         detect_units = [UnitTypeId.OBSERVER, UnitTypeId.PHOTONCANNON, UnitTypeId.OVERSEER, UnitTypeId.RAVEN,
                         UnitTypeId.MISSILETURRET, UnitTypeId.SPORECRAWLER, UnitTypeId.SPORECANNON]
-        if self.units(UnitTypeId.PROBE).ready.amount > 22 and self.units(UnitTypeId.OBSERVER).ready.amount == 0:
+        if self.units(UnitTypeId.PROBE).ready.amount > 22:
             scout_worker = None
             for worker in self.workers:
                 if self.has_order([AbilityId.PATROL], worker):
