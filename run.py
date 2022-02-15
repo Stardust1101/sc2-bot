@@ -35,7 +35,7 @@ if __name__ == "__main__":
                 'WorldofSleepersLE'
             ]
         )
-        opponent_race = Race.Zerg
+        opponent_race = Race.Protoss
         difficulty = Difficulty.VeryHard
         # map_name = "(2)16-BitLE"
         run_game(
@@ -43,7 +43,7 @@ if __name__ == "__main__":
             [
                 # Human(Race.Protoss),
                 bot,
-                Computer(opponent_race, difficulty, ai_build=AIBuild.Rush),  # CheatInsane VeryHard
+                Computer(opponent_race, difficulty),  # CheatInsane VeryHard
             ],
             realtime=False,
             #save_replay_as="./replay/" + map_name + time.strftime("%m%d%H%M%S") + ".SC2Replay"

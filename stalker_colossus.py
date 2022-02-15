@@ -28,7 +28,6 @@ class StalkerColossus(BotApi):
 
     async def economy(self):
         await self.CONTROL_PANIC()
-        await self.train_probe()
 
         await self.build_nexus()
 
@@ -334,9 +333,14 @@ class StalkerColossus(BotApi):
     async def operation_observer(self):
         if not self.units(UnitTypeId.STALKER).ready.exists:
             return
+        cloaked = self.enemy_units.filter(lambda unit: unit.is_cloaked)
         for observer in self.units(UnitTypeId.OBSERVER).ready.idle:
-            observer.move(self.units(UnitTypeId.STALKER).closest_to(self.enemy_start_locations[0]).position.towards(
-                self.townhalls.first, 2))
+            if cloaked.amount > 0:
+                observer.move(cloaked.closest_to(self.start_location).position.towards(
+                    self.townhalls.first, 3))
+            else:
+                observer.move(self.units(UnitTypeId.STALKER).closest_to(self.enemy_start_locations[0]).position.towards(
+                    self.townhalls.first, 2))
 
     async def operation_hightemplar(self):
         for hightemplar in self.units(UnitTypeId.HIGHTEMPLAR):
@@ -373,16 +377,20 @@ class StalkerColossus(BotApi):
             elif unit in self.defend_troop:
                 defend_troop.append(unit)
             # If a unit is in combat and is injured
-            #elif unit in self.attack_troop and (unit.shield_percentage == 0 and unit.health_percentage < 0.25):
-                #self.defend_troop.append(self.attack_troop.remove(unit))
+            elif unit in self.attack_troop and (unit.shield_percentage == 0 and unit.health_percentage < 0.25):
+                defend_troop.append(unit)
 
         self.attack_troop = attack_troop
         self.defend_troop = defend_troop
 
+        cloaked = self.enemy_units.filter(lambda unit: unit.is_cloaked)
+
         if len(self.defend_troop) >= 35 or self.supply_used >= 194:
             self.attack_troop += self.defend_troop
             self.defend_troop = []
-        if len(self.attack_troop) <= 10 or self.units(UnitTypeId.OBSERVER).ready.amount < 2:
+        if len(self.attack_troop) <= 10 or \
+                (self.units(UnitTypeId.OBSERVER).ready.amount < 2 and cloaked.amount != 0 and
+                 self.supply_used != 200):
             self.defend_troop += self.attack_troop
             self.attack_troop = []
 
@@ -397,6 +405,7 @@ class StalkerColossus(BotApi):
                 if probe.is_attacking:
                     probe.stop()
             await self.distribute_workers(resource_ratio=1.6)
+            await self.train_probe()
         else:
             for probe in self.units(UnitTypeId.PROBE):
                 await self.attack(probe)

@@ -130,7 +130,7 @@ class BotApi(BotAI):
                 unit.move(rally_position)
 
     async def attack(self, unit: Unit):
-        enemy = self.enemy_structures + self.enemy_units
+        enemy = self.enemy_structures + self.enemy_units.filter(lambda unit: unit.can_be_attacked)
         enemy_offensive = self.enemy_units.filter(lambda unit: not is_worker(unit)) + \
                 self.enemy_structures.filter(lambda unit: structure_attack(unit))
         enemy_passive = enemy - enemy_offensive
