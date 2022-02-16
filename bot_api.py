@@ -119,11 +119,9 @@ class BotApi(BotAI):
     async def defend(self, unit: Unit):
         half_map = self.start_location.position.distance_to(self.enemy_start_locations[0].position)
         enemy_unit = self.enemy_units.filter(
-            lambda enemy: enemy.distance_to(self.structures.closest_to(self.enemy_start_locations[0])) <
-                          0.25 * half_map)
+            lambda enemy: enemy.distance_to(self.start_location) < 0.4 * half_map)
         enemy_structure = self.enemy_structures.filter(
-            lambda enemy: enemy.distance_to(self.structures.closest_to(self.enemy_start_locations[0])) <
-                          0.25 * half_map)
+            lambda enemy: enemy.distance_to(self.start_location) < 0.4 * half_map)
         rally_position = self.structures(UnitTypeId.PYLON).ready.closest_to(self.enemy_start_locations[0]). \
             position.towards(self.game_info.map_center, 4)
         enemy_offensive = enemy_unit + enemy_structure

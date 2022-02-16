@@ -25,6 +25,7 @@ class StalkerColossus(BotApi):
         await self.economy()
         await self.troop()
         await self.tech()
+        await self.cancel_building()
 
     async def economy(self):
         await self.CONTROL_PANIC()
@@ -213,7 +214,8 @@ class StalkerColossus(BotApi):
     async def train_observer(self):
         if await self.count_unit(UnitTypeId.OBSERVER) < 1:
             await self.train_(UnitTypeId.ROBOTICSFACILITY, UnitTypeId.OBSERVER)
-        elif await self.count_unit(UnitTypeId.OBSERVER) < 2 and await self.count_unit(UnitTypeId.IMMORTAL) > 0:
+        elif await self.count_unit(UnitTypeId.OBSERVER) < 2 and \
+            (await self.count_unit(UnitTypeId.IMMORTAL) > 0 or self.supply_used > 150):
             await self.train_(UnitTypeId.ROBOTICSFACILITY, UnitTypeId.OBSERVER)
 
     async def train_warpprism(self):
@@ -397,7 +399,7 @@ class StalkerColossus(BotApi):
 
         cloaked = self.enemy_units.filter(lambda unit: unit.is_cloaked)
 
-        if len(self.defend_troop) >= 40 or self.supply_used >= 194:
+        if len(self.defend_troop) >= 45 or self.supply_used >= 194:
             self.attack_troop += self.defend_troop
             self.defend_troop = []
         if len(self.attack_troop) <= 10 or \
@@ -432,7 +434,8 @@ class StalkerColossus(BotApi):
                     scout_worker = worker
             if not scout_worker:
                 random_exp_location = random.choice(self.expansion_locations_list)
-                scout_worker = self.workers.closest_to(self.start_location)
+                if self.units(UnitTypeId.OBSERVER).ready.amount == 0:
+                    scout_worker = self.workers.closest_to(self.start_location)
                 if not scout_worker:
                     return
                 await self.order(scout_worker, AbilityId.PATROL, random_exp_location)
@@ -468,3 +471,9 @@ class StalkerColossus(BotApi):
                 random_exp_location = random.choice(self.expansion_locations_list)
                 await self.order(scout, AbilityId.PATROL, random_exp_location)
                 return
+
+    async def cancel_building(self):
+        for structure in self.structures.not_ready.filter(
+                lambda unit: unit.shield_percentage == 0 and unit.health_percentage < 0.2):
+            if await self.has_ability(AbilityId.CANCEL, structure):
+                structure(AbilityId.CANCEL)
