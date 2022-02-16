@@ -86,10 +86,11 @@ class BotApi(BotAI):
                 geysers = self.vespene_geyser.closer_than(9.0, nexus).filter \
                     (lambda vespene: not self.structures(UnitTypeId.ASSIMILATOR).closer_than(0.5, vespene.position))
                 for geyser in geysers:
-                    worker = self.units(UnitTypeId.PROBE).ready.closest_to(geyser.position)
-                    if worker and self.can_afford(UnitTypeId.ASSIMILATOR):
-                        worker.build(UnitTypeId.ASSIMILATOR, geyser)
-                        break
+                    if self.units(UnitTypeId.PROBE).ready.amount > 1:
+                        worker = self.units(UnitTypeId.PROBE).ready.closest_to(geyser.position)
+                        if worker and self.can_afford(UnitTypeId.ASSIMILATOR):
+                            worker.build(UnitTypeId.ASSIMILATOR, geyser)
+                            break
 
     async def has_ability(self, ability: AbilityId, unit: Units) -> bool:
         unit_ability = await self.get_available_abilities(unit)
@@ -117,11 +118,14 @@ class BotApi(BotAI):
 
     async def defend(self, unit: Unit):
         half_map = self.start_location.position.distance_to(self.enemy_start_locations[0].position)
-        enemy_unit = self.enemy_units.filter(lambda enemy: enemy.distance_to(self.start_location) < 0.4 * half_map)
+        enemy_unit = self.enemy_units.filter(
+            lambda enemy: enemy.distance_to(self.structures.closest_to(self.enemy_start_locations[0])) <
+                          0.25 * half_map)
         enemy_structure = self.enemy_structures.filter(
-            lambda enemy: enemy.distance_to(self.start_location) < 0.4 * half_map)
+            lambda enemy: enemy.distance_to(self.structures.closest_to(self.enemy_start_locations[0])) <
+                          0.25 * half_map)
         rally_position = self.structures(UnitTypeId.PYLON).ready.closest_to(self.enemy_start_locations[0]). \
-            position.towards(self.game_info.map_center, 10)
+            position.towards(self.game_info.map_center, 4)
         enemy_offensive = enemy_unit + enemy_structure
         if len(enemy_offensive) != 0:
             await micro_attack(unit, enemy_offensive.closest_to(unit), micro=unit.type_id != UnitTypeId.ZEALOT)
@@ -132,7 +136,7 @@ class BotApi(BotAI):
     async def attack(self, unit: Unit):
         enemy = self.enemy_structures + self.enemy_units.filter(lambda unit: unit.can_be_attacked)
         enemy_offensive = self.enemy_units.filter(lambda unit: not is_worker(unit)) + \
-                self.enemy_structures.filter(lambda unit: structure_attack(unit))
+                          self.enemy_structures.filter(lambda unit: structure_attack(unit))
         enemy_passive = enemy - enemy_offensive
         if len(enemy_offensive) != 0:
             await micro_attack(unit, enemy_offensive.closest_to(unit), micro=unit.type_id != UnitTypeId.ZEALOT)

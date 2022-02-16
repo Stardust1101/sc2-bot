@@ -207,7 +207,7 @@ class StalkerColossus(BotApi):
             await self.train_(UnitTypeId.ROBOTICSFACILITY, UnitTypeId.IMMORTAL)
 
     async def train_hightemplar(self):
-        if self.vespene > 300:
+        if self.vespene > 250:
             await self.warp_in(UnitTypeId.HIGHTEMPLAR)
 
     async def train_observer(self):
@@ -295,6 +295,18 @@ class StalkerColossus(BotApi):
             if await self.has_ability(AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL3, forge):
                 if self.can_afford(AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL3):
                     forge(AbilityId.FORGERESEARCH_PROTOSSGROUNDARMORLEVEL3)
+                    return
+            if await self.has_ability(AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL1, forge):
+                if self.can_afford(AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL1):
+                    forge(AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL1)
+                    return
+            if await self.has_ability(AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL2, forge):
+                if self.can_afford(AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL2):
+                    forge(AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL2)
+                    return
+            if await self.has_ability(AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL3, forge):
+                if self.can_afford(AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL3):
+                    forge(AbilityId.FORGERESEARCH_PROTOSSSHIELDSLEVEL3)
                     return
 
     async def operation_stalker(self):
@@ -385,7 +397,7 @@ class StalkerColossus(BotApi):
 
         cloaked = self.enemy_units.filter(lambda unit: unit.is_cloaked)
 
-        if len(self.defend_troop) >= 35 or self.supply_used >= 194:
+        if len(self.defend_troop) >= 40 or self.supply_used >= 194:
             self.attack_troop += self.defend_troop
             self.defend_troop = []
         if len(self.attack_troop) <= 10 or \
@@ -393,8 +405,6 @@ class StalkerColossus(BotApi):
                  self.supply_used != 200):
             self.defend_troop += self.attack_troop
             self.attack_troop = []
-
-        print(len(self.attack_troop), len(self.defend_troop), army.amount)
 
     async def CONTROL_PANIC(self):
         half_map = self.start_location.position.distance_to(self.enemy_start_locations[0].position)

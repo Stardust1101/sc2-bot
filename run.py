@@ -26,17 +26,20 @@ if __name__ == "__main__":
         print("Starting local game...")
         map_name = random.choice(
             [
-                'AcropolisLE',
-                'DiscoBloodbathLE',
-                'EphemeronLE',
-                'ThunderbirdLE',
-                'TritonLE',
-                'WintersGateLE',
-                'WorldofSleepersLE'
+                "AcropolisLE",
+                "DiscoBloodbathLE",
+                "ThunderbirdLE",
+                "TritonLE",
+                "WintersGateLE",
+                "WorldofSleepersLE",
+                "2000AtmospheresAIE",
+                "BerlingradAIE",
+                "JagannathaLE",
+                "KairosJunctionLE",
             ]
         )
         opponent_race = Race.Protoss
-        difficulty = Difficulty.VeryHard
+        difficulty = Difficulty.CheatInsane
         # map_name = "(2)16-BitLE"
         run_game(
             maps.get(map_name),
