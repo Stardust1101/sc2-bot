@@ -39,7 +39,7 @@ if __name__ == "__main__":
             ]
         )
         opponent_race = Race.Protoss
-        difficulty = Difficulty.CheatInsane
+        difficulty = Difficulty.CheatMoney
         # map_name = "(2)16-BitLE"
         run_game(
             maps.get(map_name),

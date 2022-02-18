@@ -84,7 +84,7 @@ class StalkerColossus(BotApi):
     async def build_pylon(self):
         if not self.townhalls.ready.exists:
             return
-        position = self.townhalls.first.position.towards(self.game_info.map_center, 9.2)
+        position = self.townhalls.first.position.towards(self.game_info.map_center, random.randint(9, 13))
         potential_supply = self.already_pending(UnitTypeId.PYLON) * 8
 
         supply_consume = self.structures(UnitTypeId.GATEWAY).amount * 2 + \
@@ -348,7 +348,8 @@ class StalkerColossus(BotApi):
         if not self.units(UnitTypeId.STALKER).ready.exists:
             return
         cloaked = self.enemy_units.filter(lambda unit: unit.is_cloaked)
-        for observer in self.units(UnitTypeId.OBSERVER).ready.idle:
+        for observer in self.units(UnitTypeId.OBSERVER).ready.filter(
+                lambda unit: not self.has_order([AbilityId.PATROL], unit)):
             if cloaked.amount > 0:
                 observer.move(cloaked.closest_to(self.start_location).position.towards(
                     self.townhalls.first, 3))
@@ -427,6 +428,8 @@ class StalkerColossus(BotApi):
                            UnitTypeId.OVERLORD, UnitTypeId.OVERSEER, UnitTypeId.OBSERVER]
         detect_units = [UnitTypeId.OBSERVER, UnitTypeId.PHOTONCANNON, UnitTypeId.OVERSEER, UnitTypeId.RAVEN,
                         UnitTypeId.MISSILETURRET, UnitTypeId.SPORECRAWLER, UnitTypeId.SPORECANNON]
+        # Due to the return problem, the scouting worker is commented
+        """
         if self.units(UnitTypeId.PROBE).ready.amount > 22:
             scout_worker = None
             for worker in self.workers:
@@ -450,8 +453,8 @@ class StalkerColossus(BotApi):
                 random_exp_location = random.choice(self.expansion_locations_list)
                 await self.order(scout_worker, AbilityId.PATROL, random_exp_location)
                 return
-
-        if self.units(UnitTypeId.OBSERVER).ready.amount > 1:
+        """
+        if self.units(UnitTypeId.OBSERVER).ready.amount >= 1:
             scout = None
             for observer in self.units(UnitTypeId.OBSERVER):
                 if self.has_order([AbilityId.PATROL], observer):
@@ -470,10 +473,11 @@ class StalkerColossus(BotApi):
             if scout.distance_to(target) < 10:
                 random_exp_location = random.choice(self.expansion_locations_list)
                 await self.order(scout, AbilityId.PATROL, random_exp_location)
+
                 return
 
     async def cancel_building(self):
-        for structure in self.structures.not_ready.filter(
+        for structure in self.structures(UnitTypeId.NEXUS).not_ready.filter(
                 lambda unit: unit.shield_percentage == 0 and unit.health_percentage < 0.2):
             if await self.has_ability(AbilityId.CANCEL, structure):
                 structure(AbilityId.CANCEL)

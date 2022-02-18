@@ -51,6 +51,17 @@ class BotApi(BotAI):
             count += 1
         return count
 
+    # Combining the half map and distance to a structure
+    def is_offensive(self, enemy):
+        half_map = self.start_location.position.distance_to(self.enemy_start_locations[0].position)
+        my_unit = self.units(UnitTypeId.PYLON) + self.units(UnitTypeId.NEXUS)
+        if enemy.distance_to(self.start_location) < max(0.4, self.townhalls.amount * 0.14) * half_map:
+            return True
+        for unit in my_unit:
+            if enemy.distance_to(unit) <= 12:
+                return True
+        return False
+
     async def train_(self, building: UnitTypeId, unit: UnitTypeId):
         if building == UnitTypeId.NEXUS:
             for nexus in self.townhalls.ready.idle:
@@ -117,14 +128,19 @@ class BotApi(BotAI):
                     return
 
     async def defend(self, unit: Unit):
+        """
         half_map = self.start_location.position.distance_to(self.enemy_start_locations[0].position)
         enemy_unit = self.enemy_units.filter(
             lambda enemy: enemy.distance_to(self.start_location) < 0.4 * half_map)
         enemy_structure = self.enemy_structures.filter(
             lambda enemy: enemy.distance_to(self.start_location) < 0.4 * half_map)
+        """
+        my_unit = self.structures + self.units
         rally_position = self.structures(UnitTypeId.PYLON).ready.closest_to(self.enemy_start_locations[0]). \
             position.towards(self.game_info.map_center, 4)
-        enemy_offensive = enemy_unit + enemy_structure
+        enemy_unit = self.enemy_units + self.enemy_structures
+        enemy_offensive = enemy_unit.filter(lambda enemy: self.is_offensive(enemy))
+
         if len(enemy_offensive) != 0:
             await micro_attack(unit, enemy_offensive.closest_to(unit), micro=unit.type_id != UnitTypeId.ZEALOT)
         else:
