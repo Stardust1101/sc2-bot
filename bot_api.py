@@ -19,10 +19,13 @@ async def micro_attack(unit: Unit, enemy: Unit, micro: bool = True):
         elif unit.weapon_cooldown < 0:
             unit.move(enemy.position.towards(unit.position, 7))
         else:
+            ground_range = unit.ground_range
+            if unit.type_id == UnitTypeId.COLOSSUS:
+                ground_range = 9
             if not enemy.is_structure:
-                unit.move(enemy.position.towards(unit.position, unit.ground_range + 1))
+                unit.move(enemy.position.towards(unit.position, ground_range + 1))
             else:
-                unit.move(enemy.position.towards(unit.position, unit.ground_range - 1))
+                unit.move(enemy.position.towards(unit.position, ground_range - 1))
     else:
         unit.move(enemy.position.towards(unit.position, 12))
 
@@ -55,7 +58,8 @@ class BotApi(BotAI):
     def is_offensive(self, enemy):
         half_map = self.start_location.position.distance_to(self.enemy_start_locations[0].position)
         my_unit = self.units(UnitTypeId.PYLON) + self.units(UnitTypeId.NEXUS)
-        if enemy.distance_to(self.start_location) < max(0.4, self.townhalls.amount * 0.14) * half_map:
+        # There is still something we can do about this
+        if enemy.distance_to(self.start_location) < max(0.4, self.townhalls.amount * 0.05 + 0.3) * half_map:
             return True
         for unit in my_unit:
             if enemy.distance_to(unit) <= 12:

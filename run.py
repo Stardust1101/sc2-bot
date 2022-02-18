@@ -1,6 +1,5 @@
-import sc2, sys
+import sys
 from __init__ import run_ladder_game
-from sc2.bot_ai import BotAI
 from sc2.data import Race, Difficulty, AIBuild
 from sc2.player import Bot, Computer, Human
 import random
@@ -8,6 +7,7 @@ import random
 from sc2 import maps
 from sc2.main import run_game
 import time
+from run_data import DataName
 
 # Load bot
 from bot_main import BotStardust
@@ -49,5 +49,6 @@ if __name__ == "__main__":
                 Computer(opponent_race, difficulty),  # CheatInsane VeryHard
             ],
             realtime=False,
-            #save_replay_as="./replay/" + map_name + time.strftime("%m%d%H%M%S") + ".SC2Replay"
+            save_replay_as="./replay/" + map_name + time.strftime("%m%d%H%M") +
+                           DataName.difficulty[difficulty] + ".SC2Replay"
         )
