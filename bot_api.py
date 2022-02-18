@@ -1,33 +1,17 @@
-import sc2
-from sc2 import position
+from abc import ABC
+
+
 from sc2.ids.unit_typeid import UnitTypeId
 from sc2.ids.ability_id import AbilityId
-from sc2.ids.upgrade_id import UpgradeId
+from sc2.ids.effect_id import EffectId
 from sc2.units import Units
 from sc2.unit import Unit
 from sc2.position import Point2
-from sc2.player import Bot, Computer
 
 from sc2.bot_ai import BotAI
-from sc2.data import Race
 
 
-async def micro_attack(unit: Unit, enemy: Unit, micro: bool = True):
-    if not enemy.type_id == UnitTypeId.DISRUPTORPHASED:
-        if unit.weapon_cooldown == 0:
-            unit.attack(enemy)
-        elif unit.weapon_cooldown < 0:
-            unit.move(enemy.position.towards(unit.position, 7))
-        else:
-            ground_range = unit.ground_range
-            if unit.type_id == UnitTypeId.COLOSSUS:
-                ground_range = 9
-            if not enemy.is_structure:
-                unit.move(enemy.position.towards(unit.position, ground_range + 1))
-            else:
-                unit.move(enemy.position.towards(unit.position, ground_range - 1))
-    else:
-        unit.move(enemy.position.towards(unit.position, 12))
+
 
 
 async def random(min, max):
@@ -44,7 +28,13 @@ def is_worker(enemy: Unit):
     return enemy.type_id in [UnitTypeId.PROBE, UnitTypeId.SCV, UnitTypeId.DRONE]
 
 
-class BotApi(BotAI):
+class BotApi(BotAI, ABC):
+
+    def has_nexus_closer_than(self, location: Point2):
+        if not self.structures(UnitTypeId.NEXUS).closer_than(5, location):
+            return True
+        else:
+            return False
 
     def has_order(self, orders, unit):
         if type(orders) != list:
@@ -65,6 +55,35 @@ class BotApi(BotAI):
             if enemy.distance_to(unit) <= 12:
                 return True
         return False
+
+    async def micro_attack(self, unit: Unit, enemy: Unit, micro: bool = True):
+
+        bile_position = None
+        for effect in self.state.effects:
+            if effect.id == EffectId.RAVAGERCORROSIVEBILECP:
+                bile_position = effect.positions
+
+        if bile_position:
+            for position in bile_position:
+                if unit.distance_to(position) < 1:
+                    unit.move(position.towards(unit.position, 2))
+                    return
+
+        if not enemy.type_id == UnitTypeId.DISRUPTORPHASED:
+            if unit.weapon_cooldown == 0:
+                unit.attack(enemy)
+            elif unit.weapon_cooldown < 0:
+                unit.move(enemy.position.towards(unit.position, 7))
+            else:
+                ground_range = unit.ground_range
+                if unit.type_id == UnitTypeId.COLOSSUS:
+                    ground_range = 9
+                if not enemy.is_structure:
+                    unit.move(enemy.position.towards(unit.position, ground_range + 1))
+                else:
+                    unit.move(enemy.position.towards(unit.position, ground_range - 1))
+        else:
+            unit.move(enemy.position.towards(unit.position, 12))
 
     async def train_(self, building: UnitTypeId, unit: UnitTypeId):
         if building == UnitTypeId.NEXUS:
@@ -139,14 +158,16 @@ class BotApi(BotAI):
         enemy_structure = self.enemy_structures.filter(
             lambda enemy: enemy.distance_to(self.start_location) < 0.4 * half_map)
         """
-        my_unit = self.structures + self.units
         rally_position = self.structures(UnitTypeId.PYLON).ready.closest_to(self.enemy_start_locations[0]). \
             position.towards(self.game_info.map_center, 4)
         enemy_unit = self.enemy_units + self.enemy_structures
+        # Add this part to ensure no gvg unit is targeting a flying unit
+        if not unit.can_attack_air:
+            enemy_unit = enemy_unit.filter(lambda enemy: not enemy.is_flying)
         enemy_offensive = enemy_unit.filter(lambda enemy: self.is_offensive(enemy))
 
         if len(enemy_offensive) != 0:
-            await micro_attack(unit, enemy_offensive.closest_to(unit), micro=unit.type_id != UnitTypeId.ZEALOT)
+            await self.micro_attack(unit, enemy_offensive.closest_to(unit), micro=unit.type_id != UnitTypeId.ZEALOT)
         else:
             if unit.distance_to(rally_position) > 10:
                 unit.move(rally_position)
@@ -156,10 +177,15 @@ class BotApi(BotAI):
         enemy_offensive = self.enemy_units.filter(lambda unit: not is_worker(unit)) + \
                           self.enemy_structures.filter(lambda unit: structure_attack(unit))
         enemy_passive = enemy - enemy_offensive
+        # Add this part to ensure no gvg unit is targeting a flying unit
+        if not unit.can_attack_air:
+            enemy_offensive = enemy_offensive.filter(lambda unit: not unit.is_flying)
+            enemy_passive = enemy_passive.filter(lambda unit: not unit.is_flying)
+
         if len(enemy_offensive) != 0:
-            await micro_attack(unit, enemy_offensive.closest_to(unit), micro=unit.type_id != UnitTypeId.ZEALOT)
-        elif len(self.enemy_structures) != 0:
-            await micro_attack(unit, enemy_passive.closest_to(unit), micro=unit.type_id != UnitTypeId.ZEALOT)
+            await self.micro_attack(unit, enemy_offensive.closest_to(unit), micro=unit.type_id != UnitTypeId.ZEALOT)
+        elif len(enemy_passive) != 0:
+            await self.micro_attack(unit, enemy_passive.closest_to(unit), micro=unit.type_id != UnitTypeId.ZEALOT)
         else:
             unit.attack(self.enemy_start_locations[0])
 

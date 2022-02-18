@@ -1,10 +1,12 @@
+from abc import ABC
+
 from sc2.ids.unit_typeid import UnitTypeId
 from sc2.ids.ability_id import AbilityId
 
 from protoss import Protoss
 
 
-class StalkerColossus(Protoss):
+class StalkerColossus(Protoss, ABC):
 
     async def stalker_colossus(self):
         await self.economy()

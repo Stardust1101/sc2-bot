@@ -40,6 +40,8 @@ if __name__ == "__main__":
         )
         opponent_race = Race.Protoss
         difficulty = Difficulty.CheatMoney
+        replay_name = "./replay/" + map_name + time.strftime("%m%d%H%M") + \
+                      DataName.difficulty[difficulty] + ".SC2Replay"
         # map_name = "(2)16-BitLE"
         run_game(
             maps.get(map_name),
@@ -49,6 +51,5 @@ if __name__ == "__main__":
                 Computer(opponent_race, difficulty),  # CheatInsane VeryHard
             ],
             realtime=False,
-            save_replay_as="./replay/" + map_name + time.strftime("%m%d%H%M") +
-                           DataName.difficulty[difficulty] + ".SC2Replay"
+            save_replay_as=replay_name
         )

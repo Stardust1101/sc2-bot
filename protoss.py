@@ -10,6 +10,14 @@ import random
 from bot_api import BotApi
 
 
+def list_filter(lst: list, f):
+    new_lst = []
+    for item in lst:
+        if f(item):
+            new_lst.append(item)
+    return new_lst
+
+
 class Protoss(BotApi):
     warp = False
     attack_troop = []
@@ -34,7 +42,7 @@ class Protoss(BotApi):
     async def build_pylon(self):
         if not self.townhalls.ready.exists:
             return
-        position = self.townhalls.first.position.towards(self.game_info.map_center, random.randint(9, 13))
+        position = self.townhalls.first.position.towards(self.game_info.map_center, random.randint(5, 14))
         potential_supply = self.already_pending(UnitTypeId.PYLON) * 8
 
         supply_consume = self.structures(UnitTypeId.GATEWAY).amount * 2 + \
@@ -154,7 +162,7 @@ class Protoss(BotApi):
         if await self.count_unit(UnitTypeId.OBSERVER) < 1:
             await self.train_(UnitTypeId.ROBOTICSFACILITY, UnitTypeId.OBSERVER)
         elif await self.count_unit(UnitTypeId.OBSERVER) < 2 and \
-            (await self.count_unit(UnitTypeId.IMMORTAL) > 0 or self.supply_used > 150):
+                (await self.count_unit(UnitTypeId.IMMORTAL) > 0 or self.supply_used > 150):
             await self.train_(UnitTypeId.ROBOTICSFACILITY, UnitTypeId.OBSERVER)
 
     async def operation_cyberneticscore(self):
@@ -342,7 +350,9 @@ class Protoss(BotApi):
                 if self.has_order([AbilityId.PATROL], observer):
                     scout = observer
             if not scout:
-                random_exp_location = random.choice(self.expansion_locations_list)
+                random_exp_location = random.choice(
+                    list_filter(self.expansion_locations_list,
+                                self.has_nexus_closer_than))
                 scout = self.units(UnitTypeId.OBSERVER).closest_to(self.start_location)
                 if not scout:
                     return
@@ -353,7 +363,9 @@ class Protoss(BotApi):
                 return
             target = Point2((scout.orders[0].target.x, scout.orders[0].target.y))
             if scout.distance_to(target) < 10:
-                random_exp_location = random.choice(self.expansion_locations_list)
+                random_exp_location = random.choice(
+                    list_filter(self.expansion_locations_list,
+                                self.has_nexus_closer_than))
                 await self.order(scout, AbilityId.PATROL, random_exp_location)
 
                 return
@@ -363,6 +375,3 @@ class Protoss(BotApi):
                 lambda unit: unit.shield_percentage == 0 and unit.health_percentage < 0.2):
             if await self.has_ability(AbilityId.CANCEL, structure):
                 structure(AbilityId.CANCEL)
-
-
-
